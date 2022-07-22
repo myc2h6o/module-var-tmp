@@ -6,20 +6,23 @@ data "azurerm_subscription" "current" {
 }
 
 resource "azurerm_role_assignment" "aks-agentpool-rg-acr-acrpull" {
-  name                 = "${var.name_prefix}_${var.aks_name}"
+  name                 = "${data.xxx.name.name}_${var.aks_name}" //ignore multiple variables, or combined
   scope                = "/subscriptions/${data.azurerm_subscription.current.subscription_id}"
   role_definition_name = "AcrPull"
   principal_id         = var.role_assignment_principal_id
 
   conditional_prop = var.flag ? var.my_conditional_prop : var.my_conditional_prop_2
 
-  nested_var_prop = var.props.my_nested_var_prop
+  nested_var_prop = var.props[0].my_nested_var_prop
   array_prop = var.my_array_prop[1]
 
+  // todo: compare with a and b
   tag = {
     "a" = var.tag_a
     "b" = var.tag_b
   }
+
+
   
   nested_prop {
     n_a = var.n_a
