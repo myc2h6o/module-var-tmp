@@ -10,7 +10,12 @@ func main() {
 	modulePath := flag.String("path", "invalid", "Module Path")
 	flag.Parse()
 
-	validator := validation.NewValidator(*modulePath)
+	ignoredVariables := []string {
+		"nb_data_disk",
+		"name_prefix",
+	}
+
+	validator := validation.NewValidator(*modulePath, ignoredVariables)
 	isValid := validator.Validate()
 
 	if !isValid {
