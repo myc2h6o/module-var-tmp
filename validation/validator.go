@@ -54,7 +54,7 @@ func (v Validator) Validate() bool {
 		for _, block := range body.Blocks {
 			switch block.Type {
 			case "data", "resource":
-				isValid := v.validateAttribute(block.Body)
+				isValid := v.validateBody(block.Body)
 				if !isValid {
 					isAllValid = false
 				}
@@ -66,47 +66,63 @@ func (v Validator) Validate() bool {
 	return isAllValid
 }
 
-func (v Validator) validateAttribute(body *hclsyntax.Body) bool {
+func (v Validator) validateBody(body *hclsyntax.Body) bool {
 	isAllValid := true
 	for _, attribute := range body.Attributes {
 		expression := attribute.Expr
 		switch expression.(type) {
 		// TODO other Expr types
-		case *hclsyntax.ConditionalExpr:
 		case *hclsyntax.FunctionCallExpr:
+		case *hclsyntax.ConditionalExpr:
+			isValid := v.validateExpression(expression.(*hclsyntax.ConditionalExpr).TrueResult, attribute.Name)
+			if !isValid {
+				isAllValid = false
+			}
+
+			isValid = v.validateExpression(expression.(*hclsyntax.ConditionalExpr).FalseResult, attribute.Name)
+			if !isValid {
+				isAllValid = false
+			}
 		default:
-			propertyName := attribute.Name
-
-			if _, ok := v.builtInProperties[propertyName]; !ok {
-				for _, variable := range expression.Variables() {
-					if variable.RootName() == "var" {
-						variableName := ""
-						for i := len(variable)-1; i >= 0; i-- {
-							switch variable[i].(type) {
-							case hcl.TraverseAttr:
-								variableName = variable[i].(hcl.TraverseAttr).Name
-								break
-							default:
-							}
-						}
-
-						isValid := v.validate(variableName, propertyName, variable[0].SourceRange())
-						if !isValid {
-							isAllValid = false
-						}
-					}
-				}
+			isValid := v.validateExpression(expression, attribute.Name)
+			if !isValid {
+				isAllValid = false
 			}
 		}
 	}
 
 	for _, block := range body.Blocks {
-		isValid := v.validateAttribute(block.Body)
+		isValid := v.validateBody(block.Body)
 		if !isValid {
 			isAllValid = false
 		}
 	}
 
+	return isAllValid
+}
+
+func (v Validator) validateExpression(expression hclsyntax.Expression, propertyName string) bool {
+	isAllValid := true
+	if _, ok := v.builtInProperties[propertyName]; !ok {
+		for _, variable := range expression.Variables() {
+			if variable.RootName() == "var" {
+				variableName := ""
+				for i := len(variable)-1; i >= 0; i-- {
+					switch variable[i].(type) {
+					case hcl.TraverseAttr:
+						variableName = variable[i].(hcl.TraverseAttr).Name
+						break
+					default:
+					}
+				}
+
+				isValid := v.validate(variableName, propertyName, variable[0].SourceRange())
+				if !isValid {
+					isAllValid = false
+				}
+			}
+		}
+	}
 	return isAllValid
 }
 
