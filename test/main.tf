@@ -1,33 +1,33 @@
-provider "azurerm" {
-  features {}
-}
+resource "azurerm_var_validation" "test" {
+  // plain text
+  name = var.test_name
 
-data "azurerm_subscription" "current" {
-}
+  // nested
+  location = var.nested_test.location
 
-resource "azurerm_role_assignment" "aks-agentpool-rg-acr-acrpull" {
-  name                 = "${data.xxx.name.name}_${var.aks_name}" //ignore multiple variables, or combined
-  scope                = "/subscriptions/${data.azurerm_subscription.current.subscription_id}"
-  role_definition_name = "AcrPull"
-  principal_id         = var.role_assignment_principal_id
+  // list
+  prop = var.test_prop[2]
 
-  conditional_prop = var.flag ? var.my_conditional_prop : var.my_conditional_prop_2
-
-  nested_var_prop = var.props[0].my_nested_var_prop
-  array_prop = var.my_array_prop[1]
-
-  // todo: compare with a and b
-  tag = {
-    "a" = var.tag_a
-    "b" = var.tag_b
+  // nested prop
+  address {
+    street = var.test_street
   }
 
+  // invalid var which has suffix
+  invalid = var.invalid_2
 
-  
-  nested_prop {
-    n_a = var.n_a
-	n_b = 1
-	n_c = var.nested_prop_n_c
-	n_d = var.nested_prop_n_d_invalid
+  // direct assign TypeMap is included
+  tags = var.tags
+
+  // composed TypeMap like tags are excluded
+  tags2 = {
+    a = var.tags2_a
   }
+
+  // Composed string is excluded
+  string_template = "Test_${var.test_str}"
+}
+
+data "azurerm_var_valication" "test" {
+
 }

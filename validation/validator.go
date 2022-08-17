@@ -20,11 +20,15 @@ func NewValidator(path string, ignoredVariables []string) Validator {
 		logger:           logger{},
 		ignoredVariables: map[string]bool{},
 		builtInProperties: map[string]bool{
-			"count":      true,
-			"for_each":   true,
-			"timeouts":   true,
-			"lifecycle":  true,
-			"depends_on": true,
+			// https://www.terraform.io/language/resources/syntax#meta-arguments
+			// https://www.terraform.io/language/resources/syntax#operation-timeouts
+			"depends_on":  true,
+			"count":       true,
+			"for_each":    true,
+			"provider":    true,
+			"lifecycle":   true,
+			"provisioner": true,
+			"timeouts":    true,
 		},
 	}
 
@@ -71,8 +75,10 @@ func (v Validator) validateBody(body *hclsyntax.Body) bool {
 	for _, attribute := range body.Attributes {
 		expression := attribute.Expr
 		switch expression.(type) {
-		// TODO other Expr types
 		case *hclsyntax.FunctionCallExpr:
+			// Function call
+		case *hclsyntax.ObjectConsExpr:
+			// TypeMap
 		case *hclsyntax.ConditionalExpr:
 			isValid := v.validateExpression(expression.(*hclsyntax.ConditionalExpr).TrueResult, attribute.Name)
 			if !isValid {
@@ -83,11 +89,13 @@ func (v Validator) validateBody(body *hclsyntax.Body) bool {
 			if !isValid {
 				isAllValid = false
 			}
-		default:
+		case *hclsyntax.ScopeTraversalExpr:
 			isValid := v.validateExpression(expression, attribute.Name)
 			if !isValid {
 				isAllValid = false
 			}
+		default:
+			// [TODO] Print skipped lines for debug purpose
 		}
 	}
 
@@ -104,7 +112,9 @@ func (v Validator) validateBody(body *hclsyntax.Body) bool {
 func (v Validator) validateExpression(expression hclsyntax.Expression, propertyName string) bool {
 	isAllValid := true
 	if _, ok := v.builtInProperties[propertyName]; !ok {
-		for _, variable := range expression.Variables() {
+		variables := expression.Variables()
+		if len(variables) == 1 {
+			variable := variables[0]
 			if variable.RootName() == "var" {
 				variableName := ""
 				for i := len(variable)-1; i >= 0; i-- {
