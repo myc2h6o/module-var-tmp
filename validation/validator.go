@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/hclsyntax"
+	"log"
 	"strings"
 )
 
 type Validator struct{
 	path string
-	logger logger
 	ignoredVariables map[string]bool
 	builtInProperties map[string]bool
 }
@@ -17,7 +17,6 @@ type Validator struct{
 func NewValidator(path string, ignoredVariables []string) Validator {
 	validator := Validator{
 		path:             path,
-		logger:           logger{},
 		ignoredVariables: map[string]bool{},
 		builtInProperties: map[string]bool{
 			// [TODO] map[string] empty struct
@@ -43,12 +42,11 @@ func NewValidator(path string, ignoredVariables []string) Validator {
 // Validate returns true as successful
 func (v Validator) Validate() bool {
 	moduleReader := reader{
-		logger: v.logger,
 	}
 
 	hclFiles, err := moduleReader.read(v.path)
 	if err != nil {
-		v.logger.EmitError(err.Error())
+		log.Printf("[ERROR] %s", err.Error())
 		return false
 	}
 
@@ -140,19 +138,19 @@ func (v Validator) validateExpression(expression hclsyntax.Expression, propertyN
 func (v Validator) validate(variableName string, propertyName string, sourceRange hcl.Range) bool {
 	message := fmt.Sprintf("%s:Line:%d Column:%d; Property: %s; Variable: %s", sourceRange.Filename, sourceRange.Start.Line, sourceRange.Start.Column, propertyName, variableName)
 	if variableName == "" || propertyName == "" {
-		v.logger.EmitError(message)
+		log.Printf("[ERROR] %s", message)
 	}
 
 	if strings.LastIndex(variableName, propertyName) != len(variableName) - len(propertyName) {
 		if _, ok := v.ignoredVariables[variableName]; ok {
-			v.logger.EmitWarning(fmt.Sprintf("(Ignored): %s", message))
+			log.Printf("[WARNING] %s", fmt.Sprintf("(Ignored): %s", message))
 			return true
 		}else {
-			v.logger.EmitError(message)
+			log.Printf("[ERROR] %s", message)
 			return false
 		}
 	}
 
-	v.logger.EmitInfo(message)
+	log.Printf("[INFO] %s", message)
 	return true
 }

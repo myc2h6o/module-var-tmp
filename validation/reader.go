@@ -10,7 +10,6 @@ import (
 )
 
 type reader struct {
-	logger logger
 }
 
 func (reader) read (modulePath string) ([]*hcl.File, error) {
