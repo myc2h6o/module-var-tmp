@@ -20,6 +20,7 @@ func NewValidator(path string, ignoredVariables []string) Validator {
 		logger:           logger{},
 		ignoredVariables: map[string]bool{},
 		builtInProperties: map[string]bool{
+			// [TODO] map[string] empty struct
 			// https://www.terraform.io/language/resources/syntax#meta-arguments
 			// https://www.terraform.io/language/resources/syntax#operation-timeouts
 			"depends_on":  true,

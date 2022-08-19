@@ -6,6 +6,7 @@ variable "invalid_2" {
   type = "string"
 }
 
+# tflint [TODO]
 variable "nested_test" {
   type = object({
     location    = string

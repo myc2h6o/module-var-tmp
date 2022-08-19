@@ -1,3 +1,6 @@
+// [TODO] yicma add tests
+// [TODO] yicma document and description
+
 resource "azurerm_var_validation" "test" {
   // plain text
   name = var.test_name
@@ -6,6 +9,7 @@ resource "azurerm_var_validation" "test" {
   location = var.nested_test.location
 
   // list
+  // tflint [TODO]
   prop = var.test_prop[2]
 
   // nested prop
