@@ -79,13 +79,15 @@ func (v Validator) validateBody(body *hclsyntax.Body) bool {
 				isValid = false
 			}
 		default:
-			v.WriteLog(fmt.Sprintf("[DEBUG] Skipping Property:%s", attribute.Name), expression.Range())
+			v.writeLog(fmt.Sprintf("[DEBUG] Skipping Property:%s", attribute.Name), expression.Range())
 		}
 	}
 
 	for _, block := range body.Blocks {
-		if !v.validateBody(block.Body) {
-			isValid = false
+		if _, ok := v.builtInProperties[block.Type]; !ok {
+			if !v.validateBody(block.Body) {
+				isValid = false
+			}
 		}
 	}
 
@@ -93,7 +95,6 @@ func (v Validator) validateBody(body *hclsyntax.Body) bool {
 }
 
 func (v Validator) validateExpression(expression hclsyntax.Expression, propertyName string) bool {
-	isValid := true
 	if _, ok := v.builtInProperties[propertyName]; !ok {
 		variables := expression.Variables()
 		if len(variables) == 1 {
@@ -110,33 +111,33 @@ func (v Validator) validateExpression(expression hclsyntax.Expression, propertyN
 				}
 
 				if !v.validate(variableName, propertyName, variable[0].SourceRange()) {
-					isValid = false
+					return false
 				}
 			}
 		}
 	}
-	return isValid
+	return true
 }
 
 func (v Validator) validate(variableName string, propertyName string, location hcl.Range) bool {
 	if variableName == "" || propertyName == "" {
-		v.WriteLog("[ERROR] Variable or Property name is empty", location)
+		v.writeLog("[ERROR] Variable or Property name is empty", location)
 	}
 
 	if strings.LastIndex(variableName, propertyName) != len(variableName)-len(propertyName) {
 		if _, ok := v.ignoredVariables[variableName]; ok {
-			v.WriteLog(fmt.Sprintf("[INFO] Variable:%s is ignored", variableName), location)
+			v.writeLog(fmt.Sprintf("[INFO] Variable:%s is ignored", variableName), location)
 			return true
 		} else {
-			v.WriteLog(fmt.Sprintf("[ERROR] Property:%s Variable:%s is invalid", propertyName, variableName), location)
+			v.writeLog(fmt.Sprintf("[ERROR] Property:%s Variable:%s is invalid", propertyName, variableName), location)
 			return false
 		}
 	}
 
-	v.WriteLog(fmt.Sprintf("[DEBUG] Property:%s Variable:%s is valid", propertyName, variableName), location)
+	v.writeLog(fmt.Sprintf("[DEBUG] Property:%s Variable:%s is valid", propertyName, variableName), location)
 	return true
 }
 
-func (v Validator) WriteLog(message string, location hcl.Range) {
+func (v Validator) writeLog(message string, location hcl.Range) {
 	log.Printf("%s Line:%d Column:%d %s", location.Filename, location.Start.Line, location.Start.Column, message)
 }
