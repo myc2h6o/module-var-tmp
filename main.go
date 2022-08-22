@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/logutils"
-	"github.com/myc2h6o/module-var-tmp/validation"
+	"github.com/myc2h6o/tf-module-var-validation/validation"
 )
 
 func main() {

@@ -1,4 +1,4 @@
-module github.com/myc2h6o/module-var-tmp
+module github.com/myc2h6o/tf-module-var-validation
 
 go 1.18
 
