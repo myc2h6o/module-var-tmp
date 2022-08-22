@@ -2,38 +2,37 @@ package validation
 
 import (
 	"fmt"
-	"github.com/hashicorp/hcl/v2"
-	"github.com/hashicorp/hcl/v2/hclsyntax"
 	"log"
 	"strings"
+
+	"github.com/hashicorp/hcl/v2"
+	"github.com/hashicorp/hcl/v2/hclsyntax"
 )
 
-type Validator struct{
-	path string
-	ignoredVariables map[string]bool
-	builtInProperties map[string]bool
+type Validator struct {
+	hclFiles          map[string]*hcl.File
+	ignoredVariables  map[string]struct{}
+	builtInProperties map[string]struct{}
 }
 
-func NewValidator(path string, ignoredVariables []string) Validator {
+func NewValidator(hclFiles map[string]*hcl.File, ignoredVariables []string) Validator {
 	validator := Validator{
-		path:             path,
-		ignoredVariables: map[string]bool{},
-		builtInProperties: map[string]bool{
-			// [TODO] map[string] empty struct
-			// https://www.terraform.io/language/resources/syntax#meta-arguments
-			// https://www.terraform.io/language/resources/syntax#operation-timeouts
-			"depends_on":  true,
-			"count":       true,
-			"for_each":    true,
-			"provider":    true,
-			"lifecycle":   true,
-			"provisioner": true,
-			"timeouts":    true,
+		hclFiles:         hclFiles,
+		ignoredVariables: map[string]struct{}{},
+		builtInProperties: map[string]struct{}{
+			// Built-in Properties are from https://www.terraform.io/language/resources/syntax#meta-arguments and https://www.terraform.io/language/resources/syntax#operation-timeouts
+			"depends_on":  {},
+			"count":       {},
+			"for_each":    {},
+			"provider":    {},
+			"lifecycle":   {},
+			"provisioner": {},
+			"timeouts":    {},
 		},
 	}
 
 	for _, variable := range ignoredVariables {
-		validator.ignoredVariables[variable] = true
+		validator.ignoredVariables[variable] = struct{}{}
 	}
 
 	return validator
@@ -41,36 +40,26 @@ func NewValidator(path string, ignoredVariables []string) Validator {
 
 // Validate returns true as successful
 func (v Validator) Validate() bool {
-	moduleReader := reader{
-	}
+	isValid := true
 
-	hclFiles, err := moduleReader.read(v.path)
-	if err != nil {
-		log.Printf("[ERROR] %s", err.Error())
-		return false
-	}
-
-	isAllValid := true
-
-	for _, hclFile := range hclFiles {
+	for _, hclFile := range v.hclFiles {
 		body := hclFile.Body.(*hclsyntax.Body)
 		for _, block := range body.Blocks {
 			switch block.Type {
 			case "data", "resource":
-				isValid := v.validateBody(block.Body)
-				if !isValid {
-					isAllValid = false
+				if !v.validateBody(block.Body) {
+					isValid = false
 				}
 			default:
 			}
 		}
 	}
 
-	return isAllValid
+	return isValid
 }
 
 func (v Validator) validateBody(body *hclsyntax.Body) bool {
-	isAllValid := true
+	isValid := true
 	for _, attribute := range body.Attributes {
 		expression := attribute.Expr
 		switch expression.(type) {
@@ -79,78 +68,75 @@ func (v Validator) validateBody(body *hclsyntax.Body) bool {
 		case *hclsyntax.ObjectConsExpr:
 			// TypeMap
 		case *hclsyntax.ConditionalExpr:
-			isValid := v.validateExpression(expression.(*hclsyntax.ConditionalExpr).TrueResult, attribute.Name)
-			if !isValid {
-				isAllValid = false
+			if !v.validateExpression(expression.(*hclsyntax.ConditionalExpr).TrueResult, attribute.Name) {
+				isValid = false
 			}
-
-			isValid = v.validateExpression(expression.(*hclsyntax.ConditionalExpr).FalseResult, attribute.Name)
-			if !isValid {
-				isAllValid = false
+			if !v.validateExpression(expression.(*hclsyntax.ConditionalExpr).FalseResult, attribute.Name) {
+				isValid = false
 			}
 		case *hclsyntax.ScopeTraversalExpr:
-			isValid := v.validateExpression(expression, attribute.Name)
-			if !isValid {
-				isAllValid = false
+			if !v.validateExpression(expression, attribute.Name) {
+				isValid = false
 			}
 		default:
-			// [TODO] Print skipped lines for debug purpose
+			v.WriteLog(fmt.Sprintf("[DEBUG] Skipping Property:%s", attribute.Name), expression.Range())
 		}
 	}
 
 	for _, block := range body.Blocks {
-		isValid := v.validateBody(block.Body)
-		if !isValid {
-			isAllValid = false
+		if !v.validateBody(block.Body) {
+			isValid = false
 		}
 	}
 
-	return isAllValid
+	return isValid
 }
 
 func (v Validator) validateExpression(expression hclsyntax.Expression, propertyName string) bool {
-	isAllValid := true
+	isValid := true
 	if _, ok := v.builtInProperties[propertyName]; !ok {
 		variables := expression.Variables()
 		if len(variables) == 1 {
 			variable := variables[0]
 			if variable.RootName() == "var" {
 				variableName := ""
-				for i := len(variable)-1; i >= 0; i-- {
+				// Find last named variable in statement like a[0].b[1]
+				for i := len(variable) - 1; i >= 0 && variableName == ""; i-- {
 					switch variable[i].(type) {
 					case hcl.TraverseAttr:
 						variableName = variable[i].(hcl.TraverseAttr).Name
-						break
 					default:
 					}
 				}
 
-				isValid := v.validate(variableName, propertyName, variable[0].SourceRange())
-				if !isValid {
-					isAllValid = false
+				if !v.validate(variableName, propertyName, variable[0].SourceRange()) {
+					isValid = false
 				}
 			}
 		}
 	}
-	return isAllValid
+	return isValid
 }
 
-func (v Validator) validate(variableName string, propertyName string, sourceRange hcl.Range) bool {
-	message := fmt.Sprintf("%s:Line:%d Column:%d; Property: %s; Variable: %s", sourceRange.Filename, sourceRange.Start.Line, sourceRange.Start.Column, propertyName, variableName)
+func (v Validator) validate(variableName string, propertyName string, location hcl.Range) bool {
 	if variableName == "" || propertyName == "" {
-		log.Printf("[ERROR] %s", message)
+		v.WriteLog("[ERROR] Variable or Property name is empty", location)
 	}
 
-	if strings.LastIndex(variableName, propertyName) != len(variableName) - len(propertyName) {
+	if strings.LastIndex(variableName, propertyName) != len(variableName)-len(propertyName) {
 		if _, ok := v.ignoredVariables[variableName]; ok {
-			log.Printf("[WARNING] %s", fmt.Sprintf("(Ignored): %s", message))
+			v.WriteLog(fmt.Sprintf("[INFO] Variable:%s is ignored", variableName), location)
 			return true
-		}else {
-			log.Printf("[ERROR] %s", message)
+		} else {
+			v.WriteLog(fmt.Sprintf("[ERROR] Property:%s Variable:%s is invalid", propertyName, variableName), location)
 			return false
 		}
 	}
 
-	log.Printf("[INFO] %s", message)
+	v.WriteLog(fmt.Sprintf("[DEBUG] Property:%s Variable:%s is valid", propertyName, variableName), location)
 	return true
+}
+
+func (v Validator) WriteLog(message string, location hcl.Range) {
+	log.Printf("%s Line:%d Column:%d %s", location.Filename, location.Start.Line, location.Start.Column, message)
 }

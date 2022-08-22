@@ -2,44 +2,44 @@ package validation
 
 import (
 	"fmt"
-	"github.com/hashicorp/hcl/v2"
-	"github.com/hashicorp/hcl/v2/hclsyntax"
-	"os"
+	"io/ioutil"
 	"path/filepath"
 	"strings"
+
+	"github.com/hashicorp/hcl/v2"
+	"github.com/hashicorp/hcl/v2/hclsyntax"
 )
 
-type reader struct {
+type Reader struct {
 }
 
-func (reader) read (modulePath string) ([]*hcl.File, error) {
-	var filePaths []string
-	err := filepath.Walk(modulePath, func(filePath string, info os.FileInfo, err error) error {
-		if !info.IsDir() {
-			if strings.HasSuffix(info.Name(), ".tf") && info.Name() != "variables.tf" && info.Name() != "outputs.tf" {
-				filePaths = append(filePaths, filePath)
-			}
-		}
-		return nil
-	})
+func NewReader() Reader {
+	return Reader{}
+}
 
+// Read gets all the .tf files under the modulePath (excluding sub-directories) and transform them into hclFile
+func (Reader) Read(modulePath string) (map[string]*hcl.File, error) {
+	files, err := ioutil.ReadDir(modulePath)
 	if err != nil {
 		return nil, err
 	}
 
-	hclFiles := make([]*hcl.File, len(filePaths))
-	for i, filePath := range filePaths {
-		bytes, err := os.ReadFile(filePath)
-		if err != nil {
-			return nil, err
-		}
+	hclFiles := make(map[string]*hcl.File)
+	for _, file := range files {
+		fileName := file.Name()
+		if !file.IsDir() && strings.HasSuffix(fileName, ".tf") {
+			bytes, err := ioutil.ReadFile(filepath.Join(modulePath, fileName))
+			if err != nil {
+				return nil, err
+			}
 
-		hclFile, diags := hclsyntax.ParseConfig(bytes, filePath, hcl.InitialPos)
-		if diags.HasErrors() {
-			return nil, fmt.Errorf(diags.Error())
-		}
+			hclFile, diags := hclsyntax.ParseConfig(bytes, fileName, hcl.InitialPos)
+			if diags.HasErrors() {
+				return nil, fmt.Errorf(diags.Error())
+			}
 
-		hclFiles[i] = hclFile
+			hclFiles[fileName] = hclFile
+		}
 	}
 
 	return hclFiles, nil

@@ -1,15 +1,13 @@
-// [TODO] yicma add tests
-// [TODO] yicma document and description
 
 resource "azurerm_var_validation" "test" {
   // plain text
+  # annotation 0
   name = var.test_name
 
   // nested
   location = var.nested_test.location
 
   // list
-  // tflint [TODO]
   prop = var.test_prop[2]
 
   // nested prop
