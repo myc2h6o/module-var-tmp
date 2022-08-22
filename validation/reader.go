@@ -11,6 +11,7 @@ import (
 )
 
 type Reader struct {
+
 }
 
 func NewReader() Reader {
