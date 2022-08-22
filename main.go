@@ -34,9 +34,10 @@ func main() {
 		os.Exit(1)
 	}
 
-	// [TODO] Read ignoredVariables from tflint annotations in variables.tf
+	// [TODO] Read ignored variables from tflint annotations in variables.tf
 	ignoredVariables := []string{
-		"name_prefix",
+		"ignored_variable_0",
+		"ignored_variable_1",
 	}
 
 	validator := validation.NewValidator(hclFiles, ignoredVariables)
