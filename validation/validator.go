@@ -124,7 +124,7 @@ func (v Validator) validate(variableName string, propertyName string, location h
 		v.writeLog("[ERROR] Variable or Property name is empty", location)
 	}
 
-	if strings.LastIndex(variableName, propertyName) != len(variableName)-len(propertyName) {
+	if index := strings.LastIndex(variableName, propertyName); index == -1 || index != len(variableName)-len(propertyName) {
 		if _, ok := v.ignoredVariables[variableName]; ok {
 			v.writeLog(fmt.Sprintf("[INFO] Variable:%s is ignored", variableName), location)
 			return true
