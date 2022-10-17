@@ -14,10 +14,6 @@ variable "street_test" {
   type = "string"
 }
 
-variable "condition_flag" {
-  type = "string"
-}
-
 variable "condition_prop_true" {
   type = "string"
 }

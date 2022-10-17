@@ -15,5 +15,5 @@ resource "azurerm_var_validation" "test" {
   }
 
   # condition_flag is ignored, testing only condition_prop_true and condition_prop_false
-  condition_prop = var.condition_flag != "" ? var.condition_prop_true : var.condition_prop_false
+  condition_prop = "" != "" ? var.condition_prop_true : var.condition_prop_false
 }

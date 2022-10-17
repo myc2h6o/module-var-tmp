@@ -1,0 +1,3 @@
+variable "address" {
+  type = "string"
+}
