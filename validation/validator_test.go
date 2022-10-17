@@ -8,38 +8,37 @@ import (
 )
 
 func TestValidate_ValidModule(t *testing.T) {
-	hclFiles := getHclFiles("valid_module", t)
+	hclFiles := getHclFiles("valid_combination", t)
 	var ignoredVariables []string
 	validator := NewValidator(hclFiles, ignoredVariables)
 	isValid := validator.Validate()
 	if !isValid {
-		t.Error("valid_module should be a valid module")
+		t.Error("`valid_combination` should be a valid module")
 	}
 }
 
 func TestValidate_InvalidModuleResource(t *testing.T) {
-	hclFiles := getHclFiles("invalid_module_resource", t)
+	hclFiles := getHclFiles("invalid_resource_combination", t)
 	var ignoredVariables []string
 	validator := NewValidator(hclFiles, ignoredVariables)
 	isValid := validator.Validate()
 	if isValid {
-		t.Error("invalid_module should be an invalid module")
+		t.Error("`invalid_resource_combination` should be an invalid module")
 	}
 }
 
-
 func TestValidate_InvalidModuleDataSource(t *testing.T) {
-	hclFiles := getHclFiles("invalid_module_data_source", t)
+	hclFiles := getHclFiles("invalid_data_source", t)
 	var ignoredVariables []string
 	validator := NewValidator(hclFiles, ignoredVariables)
 	isValid := validator.Validate()
 	if isValid {
-		t.Error("invalid_module should be an invalid module")
+		t.Error("`invalid_data_source` should be an invalid module")
 	}
 }
 
 func TestValidate_IgnoredVariables(t *testing.T) {
-	hclFiles := getHclFiles("invalid_module_resource", t)
+	hclFiles := getHclFiles("invalid_resource_combination", t)
 	ignoredVariables := []string {
 		"name_1",
 		"address",
@@ -52,7 +51,97 @@ func TestValidate_IgnoredVariables(t *testing.T) {
 	validator := NewValidator(hclFiles, ignoredVariables)
 	isValid := validator.Validate()
 	if !isValid {
-		t.Error("variables are not ignored correctly")
+		t.Error("after ignoring invalid variables, `invalid_resource_combination` should be a valid module")
+	}
+}
+
+func TestValidate_InvalidConditionFalse(t *testing.T) {
+	hclFiles := getHclFiles("invalid_condition_false", t)
+	var ignoredVariables []string
+	validator := NewValidator(hclFiles, ignoredVariables)
+	isValid := validator.Validate()
+	if isValid {
+		t.Error("`invalid_condition_false` should be an invalid module")
+	}
+}
+
+func TestValidate_invalidConditionTrue(t *testing.T) {
+	hclFiles := getHclFiles("invalid_condition_true", t)
+	var ignoredVariables []string
+	validator := NewValidator(hclFiles, ignoredVariables)
+	isValid := validator.Validate()
+	if isValid {
+		t.Error("`invalid_condition_true` should be an invalid module")
+	}
+}
+
+func TestValidate_invalidDifferentName(t *testing.T) {
+	hclFiles := getHclFiles("invalid_different_name", t)
+	var ignoredVariables []string
+	validator := NewValidator(hclFiles, ignoredVariables)
+	isValid := validator.Validate()
+	if isValid {
+		t.Error("`invalid_different_name` should be an invalid module")
+	}
+}
+
+func TestValidate_invalidList(t *testing.T) {
+	hclFiles := getHclFiles("invalid_list", t)
+	var ignoredVariables []string
+	validator := NewValidator(hclFiles, ignoredVariables)
+	isValid := validator.Validate()
+	if isValid {
+		t.Error("`invalid_list` should be an invalid module")
+	}
+}
+
+func TestValidate_invalidNameSuffix(t *testing.T) {
+	hclFiles := getHclFiles("invalid_name_suffix", t)
+	var ignoredVariables []string
+	validator := NewValidator(hclFiles, ignoredVariables)
+	isValid := validator.Validate()
+	if isValid {
+		t.Error("`invalid_name_suffix` should be an invalid module")
+	}
+}
+
+func TestValidateInvalidNested(t *testing.T) {
+	hclFiles := getHclFiles("invalid_nested", t)
+	var ignoredVariables []string
+	validator := NewValidator(hclFiles, ignoredVariables)
+	isValid := validator.Validate()
+	if isValid {
+		t.Error("`invalid_nested` should be an invalid module")
+	}
+}
+
+func TestValidate_invalidNestedList(t *testing.T) {
+	hclFiles := getHclFiles("invalid_nested_list", t)
+	var ignoredVariables []string
+	validator := NewValidator(hclFiles, ignoredVariables)
+	isValid := validator.Validate()
+	if isValid {
+		t.Error("`invalid_nested_list` should be an invalid module")
+	}
+}
+
+func TestValidate_invalidNestedProperty(t *testing.T) {
+	hclFiles := getHclFiles("invalid_nested_property", t)
+	var ignoredVariables []string
+	validator := NewValidator(hclFiles, ignoredVariables)
+	isValid := validator.Validate()
+	if isValid {
+		t.Error("`invalid_nested_property` should be an invalid module")
+	}
+}
+
+func TestValidate_invalidPartialName(t *testing.T) {
+	hclFiles := getHclFiles("invalid_partial_name", t)
+	var ignoredVariables []string
+	validator := NewValidator(hclFiles, ignoredVariables)
+	isValid := validator.Validate()
+	if isValid {
+		t.Error("`invalid_partial_name` should be an invalid module")
 	}
 }
 

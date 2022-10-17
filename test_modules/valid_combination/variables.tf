@@ -16,7 +16,7 @@ variable "test_name" {
 
 variable "nested" {
   type = object({
-    location    = string
+    location = string
   })
 }
 
@@ -26,7 +26,7 @@ variable "test_list" {
 
 variable "nested_list" {
   type = list(object({
-    region    = string
+    region = string
   }))
 }
 
